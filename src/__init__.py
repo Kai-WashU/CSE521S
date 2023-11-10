@@ -3,4 +3,3 @@ from .cv.abstract_inference_model import (AbstractInferenceModel, InferenceResul
 from .cv.yolo_inference import (YoloInference)
 
 from .internal.abstract_internal_model import (AbstractInternalModel, PromptState, ModelState)
-from .internal.internal_model import (Internal)
