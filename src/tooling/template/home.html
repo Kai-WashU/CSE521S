@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>CSE 521 Project Visualizer</title>
+  </head>
+
+  <body>
+    <div class="body">
+        <div class="list-container">
+            <div class="list">
+                <div class="header">
+                    <h2>Acquired</h2>
+                </div>
+                <ul class="list-items"></ul>
+            </div>
+            <div class="list">
+                <div class="header">
+                    <h2>Distractors</h2>
+                </div>
+                <ul class="list-items"></ul>
+            </div>
+            <div class="list">
+                <div class="header">
+                    <h2>Missing</h2>
+                </div>
+                <ul class="list-items"></ul>
+            </div>
+        </div>
+        <div class="text-container">
+            <div class="text-field">
+                <div class="header">
+                    <h2>Model State</h2>
+                </div>
+                <p class="state"></p>
+            </div>
+            <div class="text-field">
+                <div class="header">
+                    <h2>Latest Prompt</h2>
+                </div>
+                <p class="prompt"></p>
+            </div>
+        </div>
+    </div>
+    
+    <script src="{{url_for('static', filename='home.js')}}"></script>
+    <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='home.css')}}">
+  </body>
+</html>

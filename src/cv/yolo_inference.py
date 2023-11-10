@@ -1,28 +1,52 @@
 import cv2
+import dataclasses
 import math
 import ultralytics
 import ultralytics.utils.plotting as yolo_plotting
 import ultralytics.engine.results as yolo_results
-import src
-import typing
 
 MIN_LABEL_SIZE = 200
 MAX_IMAGE_QUALITY = 1080 * 720
 
-class YoloInference(src.AbstractInferenceModel):
-    def __init__(self, model_path: str = "yolov8n.pt", dataset: typing.Optional[str] = None, confidence_threshold: float = 0.5):
-        self.yolo = ultralytics.YOLO(f"../rsrc/model/{model_path}")
-        if dataset is not None:
-            self.yolo.train(data=f"../rsrc/model/{dataset}", epochs=100, imgsz=640)
-        self.confidence = confidence_threshold
+@dataclasses.dataclass
+class Point:
+    x: float
+    y: float
 
-    def process(self, image: cv2.Mat) -> src.InferenceResult:
+@dataclasses.dataclass
+class BoundingBox:
+    top_left: Point
+    bottom_right: Point
+
+@dataclasses.dataclass
+class InferenceResult:
+    raw: cv2.Mat
+    annotated: cv2.Mat
+    labels: list[str]
+    boxes: list[BoundingBox]
+
+class YoloInference:
+    def __init__(self, model_path: str = "yolov8n.pt", webcam_id: int = 0):
+        self.yolo = ultralytics.YOLO(f"../rsrc/model/{model_path}")
+        self.webcam = cv2.VideoCapture(webcam_id)
+
+    # A blocking call which runs the YOLO inference model on webcam images as fast as possible
+    def run(self):
+        while True:
+            success, image = self.webcam.read()
+            if success:
+                result = self.process(image)
+
+                # TODO: Convert result to confidence deltas and update internal model
+            
+
+    def process(self, image: cv2.Mat) -> InferenceResult:
         inferences: list[yolo_results.Results] = self.yolo.predict(image)
         annotated_image = image.copy()
         annotator = yolo_plotting.Annotator(annotated_image)
 
-        labels: list[str] = []
-        bounds: list[src.BoundingBox] = []
+        # name of label --> (bounds, confidence)
+        labels: dict[str, (BoundingBox, int)] = {}
 
         # Label image and extract identified objects list
         result: yolo_results.Results
@@ -34,11 +58,14 @@ class YoloInference(src.AbstractInferenceModel):
                     # This is a 4-value array defining the top-left and bottom-right corners
                     bounding_box = box.xyxy[0]
                     name = result.names[int(box.cls)]
+                    bounds = BoundingBox(Point(float(bounding_box[0]), float(bounding_box[1])),
+                                         Point(float(bounding_box[2]), float(bounding_box[3])))
 
                     # Save the relevant data
-                    labels.append(name)
-                    bounds.append(src.BoundingBox(src.Point(float(bounding_box[0]), float(bounding_box[1])),
-                                                  src.Point(float(bounding_box[2]), float(bounding_box[3]))))
+                    if name not in labels:
+                        labels[name] = (bounds, box.conf)
+                    elif box.conf > labels[name][1]:
+                        labels[name] = (bounds, box.conf)
 
                     # Annotate the image
                     annotator.box_label(bounding_box, f"{name} | {float(box.conf):.2}")
@@ -56,7 +83,4 @@ class YoloInference(src.AbstractInferenceModel):
         downscaled_image = cv2.resize(image, dimensions)
         downscaled_annotation = cv2.resize(annotated_image, dimensions)
 
-        return src.InferenceResult(downscaled_image, downscaled_annotation, labels, bounds)
-
-    def batched_process(self, images: list[cv2.Mat]) -> src.BatchedInferenceResult:
-        pass
+        return InferenceResult(downscaled_image, downscaled_annotation, labels, bounds)

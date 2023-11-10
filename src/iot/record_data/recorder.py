@@ -1,11 +1,11 @@
 import serial
 import time
 import enum
-import statistics
+import pyperclip
 
 # USB Addresses of Beacons
-PORT = "/dev/cu.usbmodem1101"
-DURATION = 60
+PORT = "/dev/cu.usbmodem101"
+N = 50
 
 class Beacon(enum.Enum):
     TABLE = 0
@@ -34,13 +34,13 @@ class Recorder:
     
     def record(self):
         start = time.time()
-
         loading = 1
-        while time.time() < start + DURATION:
+
+        while len(self.data) < N:
             # Read in new data
             data = self.serial_stream.read_until()
             (tag_name, rssi, ping_id) = self.parse_report(data.decode())
-            self.message += f"{rssi}, "
+            self.message += f"{rssi}\n"
             self.data.append(rssi)
 
             if len(self.data) % 5 == 0:
@@ -49,18 +49,8 @@ class Recorder:
                 print(".", end="\r")
                 loading += 1
 
-        print(self.message[:-2])
-        self.data.sort()
-        min = self.data[0]
-        max = self.data[len(self.data) - 1]
-        stdev = statistics.pstdev(self.data)
-
-        avg = 0
-        for rssi in self.data:
-            avg += rssi
-        avg /= len(self.data)
-
-        print(f"Duration: {DURATION}s | Pings Detected: {len(self.data)} | Min: {min} | Max: {max} | Average: {avg} | Standard Deviation: {stdev}")
+        pyperclip.copy(f"{time.time() - start}\n{self.message[:-1]}")
+        
 
 
 model = Recorder()
