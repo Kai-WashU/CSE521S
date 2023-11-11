@@ -1,6 +1,7 @@
 import cv2
 import dataclasses
 import math
+import src
 import ultralytics
 import ultralytics.utils.plotting as yolo_plotting
 import ultralytics.engine.results as yolo_results
@@ -19,14 +20,21 @@ class BoundingBox:
     bottom_right: Point
 
 @dataclasses.dataclass
+class InferneceEntry:
+    bounds: BoundingBox
+    confidence: float
+
+@dataclasses.dataclass
 class InferenceResult:
     raw: cv2.Mat
     annotated: cv2.Mat
-    labels: list[str]
-    boxes: list[BoundingBox]
+    labels: dict[str, InferneceEntry]
+
+CONFIDENCE_FACTOR = 10
 
 class YoloInference:
-    def __init__(self, model_path: str = "yolov8n.pt", webcam_id: int = 0):
+    def __init__(self, internal_model: src.AbstractInternalModel, model_path: str = "yolov8n.pt", webcam_id: int = 0):
+        self.model = internal_model
         self.yolo = ultralytics.YOLO(f"../rsrc/model/{model_path}")
         self.webcam = cv2.VideoCapture(webcam_id)
 
@@ -37,8 +45,10 @@ class YoloInference:
             if success:
                 result = self.process(image)
 
-                # TODO: Convert result to confidence deltas and update internal model
-            
+                detected_objects: list[(str, float)] = []
+                for label in result.labels:
+                    detected_objects.append(label, result.labels[label].confidence * CONFIDENCE_FACTOR)
+                self.model.update(detected_objects)
 
     def process(self, image: cv2.Mat) -> InferenceResult:
         inferences: list[yolo_results.Results] = self.yolo.predict(image)
@@ -46,14 +56,13 @@ class YoloInference:
         annotator = yolo_plotting.Annotator(annotated_image)
 
         # name of label --> (bounds, confidence)
-        labels: dict[str, (BoundingBox, int)] = {}
+        labels: dict[str, InferneceEntry] = {}
 
         # Label image and extract identified objects list
         result: yolo_results.Results
         for result in inferences:
             if result.boxes is not None:
                 box: yolo_results.Boxes
-                print("new result")
                 for box in result.boxes:
                     # This is a 4-value array defining the top-left and bottom-right corners
                     bounding_box = box.xyxy[0]
@@ -61,11 +70,12 @@ class YoloInference:
                     bounds = BoundingBox(Point(float(bounding_box[0]), float(bounding_box[1])),
                                          Point(float(bounding_box[2]), float(bounding_box[3])))
 
-                    # Save the relevant data
+                    # If the label is unique, keep track of it
                     if name not in labels:
-                        labels[name] = (bounds, box.conf)
+                        labels[name] = InferneceEntry(bounds, float(box.conf))
+                    # If the label isn't unique, keep the one with the highest confidence
                     elif box.conf > labels[name][1]:
-                        labels[name] = (bounds, box.conf)
+                        labels[name] = InferneceEntry(bounds, float(box.conf))
 
                     # Annotate the image
                     annotator.box_label(bounding_box, f"{name} | {float(box.conf):.2}")
@@ -83,4 +93,4 @@ class YoloInference:
         downscaled_image = cv2.resize(image, dimensions)
         downscaled_annotation = cv2.resize(annotated_image, dimensions)
 
-        return InferenceResult(downscaled_image, downscaled_annotation, labels, bounds)
+        return InferenceResult(downscaled_image, downscaled_annotation, labels)

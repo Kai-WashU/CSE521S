@@ -1,6 +1,7 @@
 import serial
 import threading
 import enum
+import src
 
 # USB Addresses of Beacons
 TABLE_0_ADDRESS = "/dev/cu.usbmodem1101"
@@ -10,6 +11,7 @@ BOX_ADDRESS = "/dev/cu.usbmodem1301"
 GROUPING = 1            # Currently, we aren't running into issues, but it is believable that we might
 MAX_ENTRIES = 16        # Pings get completed relatively fast.
 EVICTION_RATIO = 0.75   # What proportion of accumulated pings should be evicted when we hit the limit
+CONFIDENCE_FACTOR = 5
 
 class Beacon(enum.Enum):
     TABLE_0 = 0
@@ -17,7 +19,9 @@ class Beacon(enum.Enum):
     BOX = 2
 
 class ThreeBeaconIoT:
-    def __init__(self):
+    def __init__(self, internal_model: src.AbstractInternalModel):
+        self.model = internal_model
+
         # Dictionary containing RSSI data
         # <tag name> --> <ping id> --> [<table_0 rssi>, <table_1 rssi>, <box rssi>, <timeout>]
         self.record: dict[str, dict[int, list[int]]] = {}
@@ -93,7 +97,7 @@ class ThreeBeaconIoT:
                         confidence_delta = table_average - box_rssi
                         print(f"Confidence Delta: {confidence_delta}")
 
-                        # TODO: Send confidence delta to internal model
+                        self.model.update([(tag_name, confidence_delta * CONFIDENCE_FACTOR)])
                 
                 # If necessary, evict items. We need to evict in waves, otherwise new pings can't be tracked
                 if len(self.eviction_list) > MAX_ENTRIES:
@@ -101,17 +105,11 @@ class ThreeBeaconIoT:
                         (tag_name, ping_id) = self.eviction_list.pop()
                         del self.record[tag_name][ping_id]
     
-    # A blocking call which runs the IoT listeners
+    # A non-blocking call which runs the IoT listeners
     def run(self):
         table_0_thread = threading.Thread(target=self.listen, args=[Beacon.TABLE_0])
         table_1_thread = threading.Thread(target=self.listen, args=[Beacon.TABLE_1])
+        box_thread = threading.Thread(target=self.listen, args=[Beacon.BOX])
         table_0_thread.start()
         table_1_thread.start()
-        self.listen(Beacon.BOX)
-                
-
-if __name__ == "__main__":
-    model = ThreeBeaconIoT()
-    model.run()
-    while True:
-        pass
+        box_thread.start()

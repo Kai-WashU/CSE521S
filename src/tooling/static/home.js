@@ -24,11 +24,35 @@ function updateList(listElement, values) {
     }
 }
 
-// TODO: Change to fit new data format
 function update(data) {
-    updateList(acquiredList, data["state"]["acquired"]);
-    updateList(distractorList, data["state"]["distractors"]);
-    updateList(missingList, data["state"]["missing"]);
+    // Convert data objects into lists
+    acquired = []
+    distractors = []
+    missing = []
+
+    data["state"]["missing"].forEach((name) => {
+        missing.push(`${name} | 0`)
+    })
+
+    for(const [name, info] of Object.entries(data["state"]["acquired"])) {
+        value = `${name} | ${info["confidence_score"]}`
+        if(info["valid"]) {
+            acquired.push(value)
+        } else {
+            missing.push(value)
+        }
+    }
+
+    for(const [name, info] of Object.entries(data["state"]["distractors"])) {
+        if(info["valid"]) {
+            distractors.push(`${name} | ${info["confidence_score"]}`)
+        }
+    }
+
+    // Update page
+    updateList(acquiredList, acquired);
+    updateList(distractorList, distractors);
+    updateList(missingList, missing);
 }
 
 function getData() {

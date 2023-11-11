@@ -11,13 +11,16 @@ class BackendData:
     state: src.ModelState
     entry_num: int
 
-data: BackendData = None
+data: BackendData = (src.ModelState([], [], src.REQUIRED_ITEMS), -1)
 data_lock = threading.Lock()
 server = flask.Flask(__name__, template_folder="template")
 
-# TODO: Add a class which modifies the global variables for the internal model
 class BackendWriter:
-    pass
+    def write_data(self, state: src.ModelState, entry_num: int):
+        global data, data_lock
+        if data_lock.acquire(timeout=0.1):
+            data = (state, entry_num)
+            data_lock.release()
 
 @server.route("/")
 def home():
