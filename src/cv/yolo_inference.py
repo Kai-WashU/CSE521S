@@ -1,10 +1,13 @@
+import sys
+sys.path.append("..")
+
 import cv2
 import dataclasses
 import math
-import src
 import ultralytics
 import ultralytics.utils.plotting as yolo_plotting
 import ultralytics.engine.results as yolo_results
+import internal
 
 MIN_LABEL_SIZE = 200
 MAX_IMAGE_QUALITY = 1080 * 720
@@ -30,10 +33,10 @@ class InferenceResult:
     annotated: cv2.Mat
     labels: dict[str, InferneceEntry]
 
-CONFIDENCE_FACTOR = 10
+CONFIDENCE_FACTOR = 0.5
 
 class YoloInference:
-    def __init__(self, internal_model: src.AbstractInternalModel, model_path: str = "yolov8n.pt", webcam_id: int = 0):
+    def __init__(self, internal_model: internal.AbstractInternalModel, model_path: str = "yolov8n.pt", webcam_id: int = 0):
         self.model = internal_model
         self.yolo = ultralytics.YOLO(f"../rsrc/model/{model_path}")
         self.webcam = cv2.VideoCapture(webcam_id)
@@ -47,7 +50,7 @@ class YoloInference:
 
                 detected_objects: list[(str, float)] = []
                 for label in result.labels:
-                    detected_objects.append(label, result.labels[label].confidence * CONFIDENCE_FACTOR)
+                    detected_objects.append((label, result.labels[label].confidence * CONFIDENCE_FACTOR))
                 self.model.update(detected_objects)
 
     def process(self, image: cv2.Mat) -> InferenceResult:
@@ -73,8 +76,11 @@ class YoloInference:
                     # If the label is unique, keep track of it
                     if name not in labels:
                         labels[name] = InferneceEntry(bounds, float(box.conf))
+                    else:
+                        print(f"Entry for {name}")
+                        print(labels[name])
                     # If the label isn't unique, keep the one with the highest confidence
-                    elif box.conf > labels[name][1]:
+                    if name in labels and box.conf > labels[name].confidence:
                         labels[name] = InferneceEntry(bounds, float(box.conf))
 
                     # Annotate the image

@@ -2,7 +2,7 @@ const acquiredList = document.getElementsByClassName("list-items")[0]
 const distractorList = document.getElementsByClassName("list-items")[1]
 const missingList = document.getElementsByClassName("list-items")[2]
 
-let next_entry = 0
+let next_entry = -1
 
 function updateList(listElement, values) {
     values.forEach((element, index) => {
@@ -30,6 +30,8 @@ function update(data) {
     distractors = []
     missing = []
 
+    console.log(data)
+
     data["state"]["missing"].forEach((name) => {
         missing.push(`${name} | 0`)
     })
@@ -45,7 +47,7 @@ function update(data) {
 
     for(const [name, info] of Object.entries(data["state"]["distractors"])) {
         if(info["valid"]) {
-            distractors.push(`${name} | ${info["confidence_score"]}`)
+            distractors.push(`${name} | ${info["confidence_score"].toFixed(2)}`)
         }
     }
 
@@ -60,11 +62,12 @@ function getData() {
     .then(response => {
         return response.json();
     }).then(state => {
+        console.log(state)
         if("entry_num" in state) {
             next_entry = state["entry_num"] + 1;
-            update(state["data"]);
+            update(state);
         }
     });
 }
 
-//setInterval(getData, 1000 / 15.0)
+setInterval(getData, 1000/15.0)

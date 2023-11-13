@@ -1,7 +1,10 @@
+import sys
+sys.path.append("../..")
+
 import serial
 import threading
 import enum
-import src
+import internal
 
 # USB Addresses of Beacons
 TABLE_0_ADDRESS = "/dev/cu.usbmodem1101"
@@ -11,7 +14,7 @@ BOX_ADDRESS = "/dev/cu.usbmodem1301"
 GROUPING = 1            # Currently, we aren't running into issues, but it is believable that we might
 MAX_ENTRIES = 16        # Pings get completed relatively fast.
 EVICTION_RATIO = 0.75   # What proportion of accumulated pings should be evicted when we hit the limit
-CONFIDENCE_FACTOR = 5
+CONFIDENCE_FACTOR = 0.2
 
 class Beacon(enum.Enum):
     TABLE_0 = 0
@@ -19,7 +22,7 @@ class Beacon(enum.Enum):
     BOX = 2
 
 class ThreeBeaconIoT:
-    def __init__(self, internal_model: src.AbstractInternalModel):
+    def __init__(self, internal_model: internal.AbstractInternalModel):
         self.model = internal_model
 
         # Dictionary containing RSSI data

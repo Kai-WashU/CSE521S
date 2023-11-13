@@ -5,6 +5,7 @@ import dataclasses
 class ItemData:
     confidence_score: float
     valid: bool
+    last_updated: float
 
 @dataclasses.dataclass
 class ModelState:
