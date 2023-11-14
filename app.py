@@ -10,7 +10,7 @@ print("Running")
 
 writer = tooling.BackendWriter()
 internal_model = internal.InternalModel(writer)
-yolo_model = cv.YoloInference(internal_model)
+yolo_model = cv.YoloInference(internal_model, model_path="beta.pt")
 iot_model = iot.ThreeBeaconIoT(internal_model)
 
 iot_model.run()   # non-blocking

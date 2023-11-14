@@ -37,7 +37,7 @@ function update(data) {
     })
 
     for(const [name, info] of Object.entries(data["state"]["acquired"])) {
-        value = `${name} | ${info["confidence_score"]}`
+        value = `${name} | ${info["confidence_score"].toFixed(2)}`
         if(info["valid"]) {
             acquired.push(value)
         } else {
