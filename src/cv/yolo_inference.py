@@ -8,6 +8,7 @@ import ultralytics
 import ultralytics.utils.plotting as yolo_plotting
 import ultralytics.engine.results as yolo_results
 import internal
+import os
 
 MIN_LABEL_SIZE = 200
 MAX_IMAGE_QUALITY = 1080 * 720
@@ -38,7 +39,7 @@ CONFIDENCE_FACTOR = 0.5
 class YoloInference:
     def __init__(self, internal_model: internal.AbstractInternalModel, model_path: str = "yolov8n.pt", webcam_id: int = 0):
         self.model = internal_model
-        self.yolo = ultralytics.YOLO(f"../rsrc/model/{model_path}")
+        self.yolo = ultralytics.YOLO(f"rsrc/model/{model_path}")
         self.webcam = cv2.VideoCapture(webcam_id)
 
     # A blocking call which runs the YOLO inference model on webcam images as fast as possible
